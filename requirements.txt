@@ -1,4 +1,6 @@
-
-streamlit>=1.28.0
-pillow>=10.0.0
-requests>=2.31.0
+torch==2.2.0
+torchvision==0.17.1
+streamlit
+opencv-python
+Pillow
+tqdm
