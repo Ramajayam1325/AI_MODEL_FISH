@@ -83,7 +83,7 @@ def main():
     """)
     
     # Initialize classifier
-    classifier = FishSpeciesClassifier("best_fish_model_ts.pt", "classes.txt")
+    classifier = FishSpeciesClassifier("fish_species_model_h5.ipynb", "classes.txt")
     
     # Sidebar
     st.sidebar.title("About")
@@ -181,3 +181,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
