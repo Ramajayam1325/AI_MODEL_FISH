@@ -9,6 +9,10 @@ import base64
 import json
 from datetime import datetime
 
+
+# Safe way to access API key
+api_key = st.secrets.get("DEEPSEEK_API_KEY", "sk-a071a1fcb5df4b559cc5e65363f5aa24")
+
 # Page configuration
 st.set_page_config(
     page_title="🐟 AI Fish Species Analyzer",
@@ -336,3 +340,4 @@ DEEPSEEK_API_KEY = "your_deepseek_api_key_here"
 
 if __name__ == "__main__":
     main()
+
