@@ -1,6 +1,8 @@
-torch==2.2.0
-torchvision==0.17.1
+# PyTorch CPU-only compatible with Streamlit Cloud
+torch==2.2.0+cpu
+torchvision==0.17.1+cpu
 streamlit
 opencv-python
 Pillow
 tqdm
+-f https://download.pytorch.org/whl/torch_stable.html
