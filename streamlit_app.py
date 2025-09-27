@@ -1,8 +1,10 @@
-# streamlit_app.py - WORKING VERSION
+# streamlit_app.py - CORRECTED VERSION
 import streamlit as st
 from PIL import Image
 import requests
 import json
+import base64
+from io import BytesIO
 from datetime import datetime
 
 # Page configuration
@@ -12,96 +14,84 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #1f77b4;
-        text-align: center;
-        margin-bottom: 1rem;
-    }
-    .success-badge {
-        background-color: #4CAF50;
-        color: white;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-weight: bold;
-        display: inline-block;
-        margin: 10px 0;
-    }
-    .analysis-card {
-        background-color: #f0f8ff;
-        padding: 25px;
-        border-radius: 10px;
-        margin: 15px 0;
-        border-left: 5px solid #1f77b4;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.title("🐟 AI Fish Species Analyzer")
+st.markdown("### *Powered by Google Gemini AI*")
 
-class WorkingGeminiAnalyzer:
+class CorrectGeminiAnalyzer:
     def __init__(self):
-        # Directly use the API key (you can also use st.secrets)
         self.api_key = "AIzaSyAMZY9NVc03yv96pajFGKJ9v7-XWxvmMbU"
+        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent"
         self.is_connected = False
-        self.test_connection()
+        self._test_connection()
     
-    def test_connection(self):
-        """Test the API connection"""
+    def _test_connection(self):
+        """Test connection with correct endpoint"""
         try:
-            # Test using direct API call
-            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={self.api_key}"
+            url = f"{self.base_url}?key={self.api_key}"
             
             payload = {
                 "contents": [{
                     "parts": [{
-                        "text": "Say 'Connected successfully' in one word."
+                        "text": "Just respond with the word 'Connected' and nothing else."
                     }]
                 }]
             }
             
-            response = requests.post(url, json=payload, timeout=10)
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            
             if response.status_code == 200:
                 self.is_connected = True
-                return True
+                st.success("✅ Gemini API Connected Successfully!")
             else:
-                st.error(f"API returned status: {response.status_code}")
-                return False
+                st.error(f"❌ API Error {response.status_code}: {response.text}")
+                # Try alternative endpoint
+                self._try_alternative_endpoint()
                 
         except Exception as e:
-            st.error(f"Connection test failed: {e}")
-            return False
+            st.error(f"❌ Connection failed: {e}")
+    
+    def _try_alternative_endpoint(self):
+        """Try alternative endpoint"""
+        try:
+            alt_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={self.api_key}"
+            
+            payload = {
+                "contents": [{
+                    "parts": [{
+                        "text": "Test connection"
+                    }]
+                }]
+            }
+            
+            response = requests.post(alt_url, json=payload, timeout=10)
+            if response.status_code == 200:
+                self.is_connected = True
+                self.base_url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
+                st.success("✅ Connected using alternative endpoint!")
+            else:
+                st.error(f"❌ Alternative endpoint also failed: {response.status_code}")
+                
+        except Exception as e:
+            st.error(f"❌ Alternative endpoint failed: {e}")
     
     def analyze_image(self, image, context=""):
-        """Analyze image using Gemini Pro Vision via direct API call"""
+        """Analyze image using Gemini"""
         if not self.is_connected:
             return self._demo_analysis(image, context)
         
         try:
             # Convert image to base64
-            import base64
-            from io import BytesIO
-            
             buffered = BytesIO()
             image.save(buffered, format="JPEG")
             img_base64 = base64.b64encode(buffered.getvalue()).decode()
             
-            # Gemini Pro Vision API endpoint
-            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision:generateContent?key={self.api_key}"
+            url = f"{self.base_url}?key={self.api_key}"
             
-            prompt = f"""
-            You are an expert marine biologist. Analyze this fish image and provide:
-            
-            1. Species identification (common and scientific names if possible)
-            2. Key distinctive features
-            3. Habitat information
-            4. Interesting facts
-            
-            Context: {context}
-            
-            Be detailed and scientific but engaging.
-            """
+            prompt = self._create_prompt(context)
             
             payload = {
                 "contents": [{
@@ -114,138 +104,162 @@ class WorkingGeminiAnalyzer:
                             }
                         }
                     ]
-                }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 1000,
+                }
             }
             
-            response = requests.post(url, json=payload, timeout=30)
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
-                analysis_text = result['candidates'][0]['content']['parts'][0]['text']
-                return {"source": "Gemini Pro Vision", "analysis": analysis_text}
+                if 'candidates' in result and len(result['candidates']) > 0:
+                    analysis_text = result['candidates'][0]['content']['parts'][0]['text']
+                    return {"source": "Gemini AI", "analysis": analysis_text, "success": True}
+                else:
+                    return {"source": "API Response Error", "analysis": self._demo_analysis(image, context), "success": False}
             else:
-                return {"source": f"API Error: {response.status_code}", "analysis": self._demo_analysis(image, context)}
+                return {"source": f"API Error {response.status_code}", "analysis": self._demo_analysis(image, context), "success": False}
                 
         except Exception as e:
-            return {"source": f"Error: {str(e)}", "analysis": self._demo_analysis(image, context)}
+            return {"source": f"Error: {str(e)}", "analysis": self._demo_analysis(image, context), "success": False}
+    
+    def _create_prompt(self, context):
+        return f"""
+        You are an expert marine biologist. Analyze this fish image and provide a comprehensive report.
+
+        USER CONTEXT: {context if context else "No additional context provided"}
+
+        Please provide detailed analysis covering:
+
+        1. **SPECIES IDENTIFICATION:**
+           - Most likely species (common and scientific names)
+           - Confidence level and reasoning
+           - Alternative possibilities
+
+        2. **MORPHOLOGICAL FEATURES:**
+           - Body shape and size characteristics
+           - Coloration patterns and markings
+           - Fin structure and special adaptations
+
+        3. **HABITAT & ECOLOGY:**
+           - Natural habitat type
+           - Geographical distribution
+           - Behavioral characteristics
+
+        4. **INTERESTING FACTS:**
+           - Unique biological features
+           - Conservation status if known
+           - Scientific significance
+
+        Be scientific but engaging. If identification is uncertain, explain what features are visible and what would help with better identification.
+        """
     
     def _demo_analysis(self, image, context):
-        """Demo analysis when API is not available"""
+        """Enhanced demo analysis"""
         return f"""
-**🔍 FISH ANALYSIS REPORT**
+**🔍 AI FISH ANALYSIS REPORT**
 
-**Status:** {'API Connected Successfully! 🎉' if self.is_connected else 'Demo Mode'}
-
-**Image Analysis:**
-- **Dimensions:** {image.size[0]} × {image.size[1]} pixels
+**📊 IMAGE TECHNICAL DETAILS**
+- **Resolution:** {image.size[0]} × {image.size[1]} pixels
 - **Color Mode:** {image.mode}
-- **Context:** {context if context else 'Standard analysis'}
+- **Analysis Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- **User Context:** {context if context else 'Standard analysis'}
 
-**Features Detected:**
-- Fish morphology visible
-- Suitable for species identification
-- Good image quality for analysis
+**🐠 PRELIMINARY ASSESSMENT**
 
-**Next Steps:**
-The AI is ready to analyze your fish image! Upload a photo and click 'Analyze'.
+Based on the image characteristics, this fish exhibits features commonly found in aquatic species. The visible morphology suggests adaptations for efficient swimming and survival in specific aquatic environments.
+
+**🔬 OBSERVABLE CHARACTERISTICS:**
+- Body shape suitable for aquatic locomotion
+- Fin configuration supporting mobility
+- Coloration patterns that may serve ecological functions
+
+**🌍 HABITAT INFERENCE:**
+The morphological features suggest adaptation to aquatic environments, possibly:
+- Freshwater or marine habitats
+- Tropical or temperate zones based on general characteristics
+- Specific depth ranges based on body structure
+
+**💡 ENHANCEMENT NOTES:**
+*This analysis demonstrates the application's capability. With proper API configuration, the system would provide precise species identification using advanced AI analysis.*
+
+**🎯 NEXT STEPS FOR RESEARCH-GRADE ANALYSIS:**
+1. Ensure correct API endpoint configuration
+2. Verify network connectivity
+3. Check for any API usage limits or restrictions
 """
 
-def main():
-    st.markdown('<h1 class="main-header">🐟 AI Fish Species Analyzer</h1>', unsafe_allow_html=True)
-    st.markdown("### *Powered by Google Gemini AI*")
+# Initialize analyzer
+analyzer = CorrectGeminiAnalyzer()
+
+# Display status
+if analyzer.is_connected:
+    st.success("🎉 Ready to analyze fish images!")
+else:
+    st.warning("🔸 Using demo mode - API connection issues")
+
+# Main interface
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.subheader("📤 Upload Image")
+    uploaded_file = st.file_uploader("Choose fish image", type=['jpg', 'jpeg', 'png'])
     
-    # Initialize analyzer
-    analyzer = WorkingGeminiAnalyzer()
+    context = st.text_area("Additional context:", placeholder="Where was this taken? Any details?")
     
-    # Display connection status
-    if analyzer.is_connected:
-        st.markdown('<div class="success-badge">✅ Gemini API Connected Successfully!</div>', unsafe_allow_html=True)
-        st.balloon()
-    else:
-        st.error("❌ API Connection Failed - Using Demo Mode")
-    
-    # Sidebar
-    with st.sidebar:
-        st.header("⚙️ Configuration")
-        st.write(f"**API Status:** {'✅ Connected' if analyzer.is_connected else '❌ Disconnected'}")
-        st.write(f"**Key Verified:** ✅ Valid")
-        st.write(f"**Last Check:** {datetime.now().strftime('%H:%M:%S')}")
+    if uploaded_file:
+        st.info("Image ready for analysis!")
+
+with col2:
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_container_width=True)
         
-        st.markdown("---")
-        st.subheader("📊 App Info")
-        st.write("**Version:** 3.0 - Direct API")
-        st.write("**Model:** Gemini Pro Vision")
-        st.write("**Framework:** Streamlit")
-    
-    # Main content
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("📤 Upload Fish Image")
-        
-        uploaded_file = st.file_uploader(
-            "Choose a fish image", 
-            type=['jpg', 'jpeg', 'png'],
-            help="Select a clear image of a fish"
-        )
-        
-        context = st.text_area(
-            "Additional context (optional):",
-            placeholder="Where was this photo taken? Any specific details?",
-            height=80
-        )
-    
-    with col2:
-        if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Image", use_container_width=True)
-            
-            st.write("**Image Details:**")
-            col_info1, col_info2 = st.columns(2)
-            with col_info1:
-                st.write(f"Size: {image.size[0]} × {image.size[1]}")
-                st.write(f"Format: {image.format}")
-            with col_info2:
-                st.write(f"Mode: {image.mode}")
-                st.write(f"Type: {'Color' if image.mode == 'RGB' else 'Grayscale'}")
-            
-            if st.button("🚀 Analyze with Gemini AI", type="primary", use_container_width=True):
-                with st.spinner("🔬 Gemini AI is analyzing your image..."):
-                    result = analyzer.analyze_image(image, context)
-                    
-                    st.markdown("---")
-                    st.subheader("📋 Analysis Results")
-                    
-                    # Display source
-                    if "Gemini" in result['source']:
-                        st.success(f"**Source:** {result['source']}")
-                    else:
-                        st.warning(f"**Source:** {result['source']}")
-                    
-                    # Display analysis
-                    st.markdown("### 🐠 Analysis Report")
-                    st.markdown(result['analysis'])
-                    
-                    # Download option
-                    results_text = f"""
+        if st.button("🚀 Analyze with AI", type="primary", use_container_width=True):
+            with st.spinner("🔬 AI is analyzing your image..."):
+                result = analyzer.analyze_image(image, context)
+                
+                st.markdown("---")
+                st.subheader("📋 Analysis Results")
+                
+                if result['success']:
+                    st.success("✅ AI Analysis Complete!")
+                else:
+                    st.warning("⚠️ Using enhanced demo analysis")
+                
+                st.markdown(result['analysis'])
+                
+                # Download option
+                results_text = f"""
 Fish Analysis Report
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Status: {'AI Analysis' if result['success'] else 'Demo Mode'}
 Source: {result['source']}
-Image: {uploaded_file.name}
 
 {result['analysis']}
 """
-                    st.download_button(
-                        label="📥 Download Report",
-                        data=results_text,
-                        file_name=f"fish_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                        use_container_width=True
-                    )
-        
-        else:
-            st.info("👆 Upload a fish image to get started!")
-            st.image("https://via.placeholder.com/400x300/4CAF50/FFFFFF?text=Upload+Fish+Image", 
-                    caption="Upload a fish image for AI analysis", use_container_width=True)
+                st.download_button(
+                    "📥 Download Report",
+                    data=results_text,
+                    file_name=f"fish_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    use_container_width=True
+                )
+    else:
+        st.info("👆 Upload a fish image to begin analysis")
 
-if __name__ == "__main__":
-    main()
+# Debug information
+with st.expander("🔧 Technical Details"):
+    st.write("**API Key:**", analyzer.api_key[:10] + "..." if analyzer.api_key else "Not set")
+    st.write("**Endpoint:**", analyzer.base_url)
+    st.write("**Connection Status:**", "Connected" if analyzer.is_connected else "Failed")
+    st.write("**Last Check:**", datetime.now().strftime("%H:%M:%S"))
+
+st.markdown("---")
+st.markdown("*AI Fish Species Analyzer - Internship Project*")
