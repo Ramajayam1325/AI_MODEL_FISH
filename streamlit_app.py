@@ -3,17 +3,29 @@ import torch
 import torchvision.transforms as transforms
 from torchvision.models import mobilenet_v2
 from PIL import Image
+import requests
 
-# ----------------- Load Classes -----------------
+# ----------------- Download model from GitHub -----------------
+MODEL_URL = "https://github.com/<username>/<repo>/raw/main/best_fish_model.pth"
+MODEL_PATH = "best_fish_model.pth"
+
+# Download if not exists
+import os
+if not os.path.exists(MODEL_PATH):
+    r = requests.get(MODEL_URL)
+    with open(MODEL_PATH, "wb") as f:
+        f.write(r.content)
+
+# ----------------- Load classes -----------------
 with open("classes.txt", "r") as f:
     classes = [line.strip() for line in f.readlines()]
 
-# ----------------- Load Model ------------------
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = mobilenet_v2(weights=None)  # No pretrained weights
+# ----------------- Load model ------------------
+device = torch.device("cpu")
+model = mobilenet_v2(weights=None)
 num_ftrs = model.classifier[1].in_features
 model.classifier[1] = torch.nn.Linear(num_ftrs, len(classes))
-model.load_state_dict(torch.load("best_fish_model.pth", map_location=device))
+model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model.eval()
 model.to(device)
 
