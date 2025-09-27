@@ -1,115 +1,91 @@
-## streamlit_app.py
+# streamlit_app.py with Gemini API (Free)
 import streamlit as st
-import requests
-import json
+import google.generativeai as genai
 from PIL import Image
 import io
 
-# Page config
-st.set_page_config(page_title="AI Fish Analyzer", page_icon="🐟")
+# Configure Gemini (Free tier available)
+def setup_gemini():
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
+    if api_key:
+        genai.configure(api_key=api_key)
+    return api_key
 
-class DeepSeekAPI:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.base_url = "https://api.deepseek.com/v1/chat/completions"
+def analyze_with_gemini(image, context=""):
+    """Analyze fish image using Gemini Pro Vision"""
+    model = genai.GenerativeModel('gemini-pro-vision')
     
-    def analyze_fish_image(self, image_info, user_context=""):
-        """Analyze fish image using DeepSeek API"""
-        
-        prompt = f"""
-        You are a marine biologist specializing in fish species identification.
-        
-        IMAGE INFORMATION:
-        - Dimensions: {image_info['width']}x{image_info['height']} pixels
-        - Color mode: {image_info['mode']}
-        - User context: {user_context if user_context else 'No additional context provided'}
-        
-        Please provide a comprehensive analysis covering:
-        1. **Possible species identification** (top 3 guesses with confidence levels)
-        2. **Key identifying features** (body shape, coloration, fins, etc.)
-        3. **Habitat and distribution**
-        4. **Interesting facts or behaviors**
-        5. **Conservation status** (if known)
-        
-        Be scientific but engaging. If identification is uncertain, mention what additional information would help.
-        """
-        
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": "deepseek-chat",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are an expert marine biologist with extensive knowledge of fish species worldwide."
-                },
-                {
-                    "role": "user", 
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.7,
-            "max_tokens": 1000
-        }
-        
-        try:
-            response = requests.post(self.base_url, headers=headers, json=data, timeout=30)
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
-        except Exception as e:
-            return f"API Error: {str(e)}"
+    prompt = f"""
+    You are a marine biology expert. Analyze this fish image and provide:
+    
+    1. Possible species identification (top 3 guesses)
+    2. Distinctive features observed
+    3. Habitat information
+    4. Interesting facts
+    
+    Additional context: {context}
+    
+    Be scientific but engaging in your response.
+    """
+    
+    try:
+        response = model.generate_content([prompt, image])
+        return response.text
+    except Exception as e:
+        return f"Gemini analysis unavailable. Demo mode activated.\nError: {e}"
 
 def main():
-    st.title("🐟 AI Fish Species Analyzer")
+    st.title("🐟 AI Fish Species Analyzer (Gemini)")
     
-    # Initialize API (check if key exists)
-    api_key = st.secrets.get("DEEPSEEK_API_KEY", "")
+    # API setup
+    api_key = setup_gemini()
     
     if not api_key:
-        st.warning("🔑 Please add your DeepSeek API key to continue")
         st.info("""
-        **How to get your API key:**
-        1. Visit [DeepSeek Platform](https://platform.deepseek.com/)
-        2. Sign up and verify your account
-        3. Go to API Management
-        4. Create a new API key
-        5. Add it to your Streamlit secrets
+        **Using Demo Mode** - For full functionality:
+        1. Get free Gemini API key: https://aistudio.google.com/
+        2. Add `GEMINI_API_KEY` to your secrets
         """)
-        return
     
-    analyzer = DeepSeekAPI(api_key)
+    uploaded_file = st.file_uploader("Upload fish image", type=['jpg', 'png', 'jpeg'])
+    context = st.text_input("Additional context (optional):")
     
-    # File upload
-    uploaded_file = st.file_uploader("Upload a fish image", type=['jpg', 'png', 'jpeg'])
-    user_context = st.text_area("Additional context (optional):", placeholder="Where was this photo taken? Any specific details?")
-    
-    if uploaded_file and st.button("Analyze Fish"):
-        with st.spinner("Analyzing image with DeepSeek AI..."):
-            try:
-                # Open and analyze image
-                image = Image.open(uploaded_file)
-                st.image(image, caption="Uploaded Image", use_column_width=True)
-                
-                # Basic image info
-                image_info = {
-                    'width': image.size[0],
-                    'height': image.size[1],
-                    'mode': image.mode,
-                    'format': image.format
-                }
-                
-                # Get AI analysis
-                analysis = analyzer.analyze_fish_image(image_info, user_context)
-                
-                # Display results
-                st.subheader("🔍 AI Analysis Results")
-                st.write(analysis)
-                
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+    if uploaded_file and st.button("Analyze"):
+        with st.spinner("Analyzing with AI..."):
+            image = Image.open(uploaded_file)
+            st.image(image, use_column_width=True)
+            
+            if api_key:
+                analysis = analyze_with_gemini(image, context)
+            else:
+                analysis = demo_analysis(image, context)
+            
+            st.subheader("🔍 Analysis Results")
+            st.write(analysis)
+
+def demo_analysis(image, context):
+    """Free demo analysis without API"""
+    return f"""
+**🐠 Demo Fish Analysis Results**
+
+**Image Analysis:**
+- Dimensions: {image.size[0]} × {image.size[1]} pixels
+- Color Mode: {image.mode}
+- Context: {context if context else 'Not provided'}
+
+**Species Identification:**
+Based on visual characteristics, this fish appears to be a tropical species commonly found in coral reef environments.
+
+**Key Features:**
+- Vibrant coloration patterns
+- Streamlined body shape for efficient swimming
+- Adapted for reef habitat navigation
+
+**Habitat Information:**
+Likely inhabits warm tropical waters between 24-28°C, commonly found in coral reef ecosystems.
+
+*💡 For accurate species identification, add a free Gemini API key from Google AI Studio.*
+"""
 
 if __name__ == "__main__":
     main()
