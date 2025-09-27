@@ -1,11 +1,10 @@
-# PyTorch CPU-only version for Streamlit Cloud
+# PyTorch CPU-only version from PyPI
 torch==2.2.0+cpu
 torchvision==0.17.1+cpu
--f https://download.pytorch.org/whl/torch_stable.html
 
-# Streamlit and utilities
+# Other dependencies
 streamlit==1.29.0
-opencv-python==4.9.0.74
-Pillow==10.0.0
-tqdm==4.66.1
-requests==2.31.0
+opencv-python
+Pillow
+tqdm
+requests
