@@ -55,7 +55,7 @@ class GeminiFishAnalyzer:
         """Analyze fish image using Gemini Pro Vision"""
         
         # If no API key, use demo mode
-        if not self.api_key or self.api_key == "your_gemini_key_here":
+        if not self.api_key or self.api_key == "AIzaSyAMZY9NVc03yv96pajFGKJ9v7-XWxvmMbU":
             return {"source": "Demo Mode", "analysis": self._demo_analysis(image, context)}
         
         # Try Gemini API
@@ -361,3 +361,4 @@ Context: {context}
 
 if __name__ == "__main__":
     main()
+
