@@ -1,9 +1,10 @@
-import os
-import onnxruntime as ort
+# Instead of ONNX, use direct image analysis
+from PIL import Image
+import requests
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "fish_model.onnx")
-
-session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+def analyze_image(image):
+    # Your analysis logic here
+    return "Analysis result"
 import streamlit as st
 import onnxruntime as ort
 import numpy as np
@@ -43,4 +44,5 @@ if uploaded:
 
     label, confidence = predict(image)
     st.success(f"Prediction: {label} ({confidence*100:.2f}%)")
+
 
