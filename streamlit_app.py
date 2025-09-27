@@ -1,3 +1,9 @@
+import os
+import onnxruntime as ort
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "fish_model.onnx")
+
+session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
 import streamlit as st
 import onnxruntime as ort
 import numpy as np
@@ -37,3 +43,4 @@ if uploaded:
 
     label, confidence = predict(image)
     st.success(f"Prediction: {label} ({confidence*100:.2f}%)")
+
