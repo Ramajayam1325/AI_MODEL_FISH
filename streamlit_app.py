@@ -1,49 +1,47 @@
 import streamlit as st
 from PIL import Image
-import requests
-from io import BytesIO
-import base64
+import numpy as np
+import tensorflow as tf
 from datetime import datetime
 
-st.set_page_config(page_title="🐟 Fish Analyzer", page_icon="🐟", layout="wide")
-st.title("🐟 AI Fish Species Analyzer")
+# Page config
+st.set_page_config(page_title="🐟 Fish Species Classifier", page_icon="🐟", layout="wide")
+st.title("🐟 Fish Species Classifier (4000 Species)")
 
-def analyze_fish_image(image, context=""):
-    """Enhanced analysis with better fallback"""
+# Load your trained model
+@st.cache_resource
+def load_model():
     try:
-        buffered = BytesIO()
-        image.save(buffered, format="JPEG")
-        
-        API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
-        response = requests.post(API_URL, data=buffered.getvalue(), timeout=30)
-        
-        if response.status_code == 200:
-            predictions = response.json()[:3]
-            analysis = "**🔍 AI Analysis Results:**\\n\\n"
-            for i, pred in enumerate(predictions, 1):
-                analysis += f"{i}. **{pred['label'].title()}**: {pred['score']*100:.1f}%\\n"
-            return analysis, True
+        # Update this path to your actual model file
+        model = tf.keras.models.load_model('fish_species_model.h5')
+        return model
     except:
-        pass
+        st.error("Model file not found. Please check the path.")
+        return None
+
+model = load_model()
+
+# Preprocess image for your model
+def preprocess_image(image):
+    image = image.resize((224, 224))  # Adjust to your model's input size
+    image_array = np.array(image) / 255.0
+    return np.expand_dims(image_array, axis=0)
+
+# Class names (update with your 4000 species)
+class_names = ["Species_1", "Species_2", "Species_3"]  # Replace with your actual class names
+
+def predict_fish_species(image):
+    if model is None:
+        return "Model not loaded"
     
-    # Enhanced fallback analysis
-    fallback = f"""
-**🔍 Expert Fish Analysis**
+    processed_image = preprocess_image(image)
+    predictions = model.predict(processed_image)
+    predicted_class = np.argmax(predictions[0])
+    confidence = predictions[0][predicted_class]
+    
+    return class_names[predicted_class], confidence
 
-**Image Analysis:**
-- Resolution: {image.size[0]} × {image.size[1]} pixels
-- Color Mode: {image.mode}
-- Quality: ✅ Excellent for analysis
-
-**Features Detected:**
-- Fish morphology visible
-- Good lighting and contrast
-- Suitable for species identification
-
-**Status:** AI service optimizing - Try again in 30 seconds
-"""
-    return fallback, False
-
+# Main app
 uploaded_file = st.file_uploader("📤 Upload Fish Image", type=['jpg', 'png', 'jpeg'])
 
 if uploaded_file:
@@ -56,14 +54,16 @@ if uploaded_file:
         st.write(f"**Size:** {image.size[0]} × {image.size[1]} pixels")
     
     with col2:
-        if st.button("🚀 Analyze with AI", type="primary"):
-            with st.spinner("Analyzing with AI..."):
-                result, success = analyze_fish_image(image)
-                st.markdown(result)
-                if success:
-                    st.success("✅ AI Analysis Complete!")
-                else:
-                    st.info("🔸 Enhanced Analysis Complete")
+        if st.button("🔬 Classify Fish Species", type="primary"):
+            with st.spinner("Classifying with your trained model..."):
+                species, confidence = predict_fish_species(image)
+                
+                st.success(f"**Predicted Species:** {species}")
+                st.success(f"**Confidence:** {confidence:.2%}")
+                st.success(f"**Model:** 4000 Species Classifier")
 
 else:
-    st.info("👆 Upload a fish image to get started!")
+    st.info("👆 Upload a fish image for species classification")
+
+st.markdown("---")
+st.write("Trained on 4000 Fish Species · Custom AI Model")
