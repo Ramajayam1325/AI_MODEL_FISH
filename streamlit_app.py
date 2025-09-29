@@ -7,16 +7,16 @@ import torchvision.models as models
 st.set_page_config(page_title="🐟 Fish Classifier", page_icon="🐟", layout="wide")
 st.title("🐟 Fish Species Classifier")
 
-# Load PyTorch model
+# Load PyTorch model with weights_only=False
 @st.cache_resource
 def load_model():
     try:
-        # Create model architecture (same as your training)
+        # Create model architecture
         model = models.resnet50(pretrained=False)
         model.fc = torch.nn.Linear(model.fc.in_features, 483)  # 483 species
         
-        # Load weights
-        model.load_state_dict(torch.load('fish_model.pth', map_location='cpu'))
+        # Load weights with weights_only=False
+        model.load_state_dict(torch.load('fish_model.pth', map_location='cpu', weights_only=False))
         model.eval()
         st.success("✅ PyTorch model loaded!")
         return model
@@ -26,26 +26,54 @@ def load_model():
 
 model = load_model()
 
-def predict_fish(image):
+# Rest of your code...
+else:
+    st.error("❌ Model file 'fish_model.pth' not found")
+    model = None
+
+# Your class names (use first few for testing)
+CLASS_NAMES = ['Istiophorus_platypterus', 'acanthaluteres_brownii', 'acanthaluteres_spilomelanurus', 
+               'acanthaluteres_vittiger', 'acanthistius_cinctus']  # Add more as needed
+
+def predict_fish_species(image):
     if model is None:
         return "Model not available", 0.0
     
-    # Preprocess for PyTorch
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    # Preprocess image
+    image = image.resize((224, 224))
+    img_array = np.array(image) / 255.0
     
-    image_tensor = transform(image).unsqueeze(0)
+    if len(img_array.shape) == 2:
+        img_array = np.stack([img_array] * 3, axis=-1)
     
-    with torch.no_grad():
-        outputs = model(image_tensor)
-        probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
-        predicted_class = torch.argmax(probabilities).item()
-        confidence = probabilities[predicted_class].item()
+    img_array = np.expand_dims(img_array, axis=0)
     
-    species_name = f"Species_{predicted_class}"  # Replace with your class names
+    # Predict
+    predictions = model.predict(img_array, verbose=0)
+    predicted_class = np.argmax(predictions[0])
+    confidence = float(predictions[0][predicted_class])
+    
+    species_name = CLASS_NAMES[predicted_class % len(CLASS_NAMES)]
+    
     return species_name, confidence
 
-# Rest of your app...
+# Main app
+uploaded_file = st.file_uploader("📤 Upload Fish Image", type=['jpg', 'png', 'jpeg'])
+
+if uploaded_file:
+    image = Image.open(uploaded_file)
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.image(image, use_container_width=True)
+        st.write(f"**Size:** {image.size[0]} × {image.size[1]} pixels")
+    
+    with col2:
+        if st.button("🔬 Classify Species", type="primary"):
+            with st.spinner("Classifying..."):
+                species, confidence = predict_fish_species(image)
+                st.success(f"**Species:** {species}")
+                st.success(f"**Confidence:** {confidence:.2%}")
+
+st.markdown("---")
+st.write("Using your trained fish species model")
