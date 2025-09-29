@@ -156,7 +156,7 @@ if uploaded_file:
                 
                 st.markdown(report)
                 st.success(f"✅ Species Identified: {species_info['common_name']}")
-                st.balloon()
+          
 
 else:
     st.info("👆 Upload a fish image for species identification")
@@ -175,3 +175,4 @@ else:
 
 st.markdown("---")
 st.success("🔬 **Professional Fish Species Identification - 483 Species Database**")
+
