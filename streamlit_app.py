@@ -72,10 +72,11 @@ if uploaded_file:
                 result = analyze_fish_image(image)
                 st.markdown(result)
                 st.success("✅ Analysis Complete!")
-                st.balloon()
+        
 
 else:
     st.info("👆 Upload a fish image for expert AI analysis")
 
 st.markdown("---")
 st.success("🎉 **Application Ready - 483 Species Classification System**")
+
