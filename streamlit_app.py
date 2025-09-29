@@ -26,10 +26,6 @@ def load_model():
 
 model = load_model()
 
-# Rest of your code...
-else:
-    st.error("❌ Model file 'fish_model.pth' not found")
-    model = None
 
 # Your class names (use first few for testing)
 CLASS_NAMES = ['Istiophorus_platypterus', 'acanthaluteres_brownii', 'acanthaluteres_spilomelanurus', 
@@ -77,3 +73,4 @@ if uploaded_file:
 
 st.markdown("---")
 st.write("Using your trained fish species model")
+
