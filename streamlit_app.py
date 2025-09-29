@@ -8,14 +8,14 @@ st.set_page_config(page_title="🐟 Fish Species Classifier", page_icon="🐟", 
 st.title("🐟 AI Fish Species Classifier")
 
 # Check if model file exists
-if os.path.exists('fish_species_model.h5'):
+if os.path.exists('best_fish_model_ts_pt.ipynb'):
     st.success("✅ Model file found!")
     
     # Load your actual model
     @st.cache_resource
     def load_model():
         try:
-            model = tf.keras.models.load_model('fish_species_model.h5')
+            model = tf.keras.models.load_model('best_fish_model_ts_pt.ipynb')
             st.success("✅ Model loaded successfully!")
             return model
         except Exception as e:
@@ -24,7 +24,7 @@ if os.path.exists('fish_species_model.h5'):
     
     model = load_model()
 else:
-    st.error("❌ Model file 'fish_species_model.h5' not found")
+    st.error("❌ Model file 'best_fish_model_ts_pt.ipynb' not found")
     model = None
 
 # Your class names (use first few for testing)
@@ -73,3 +73,4 @@ if uploaded_file:
 
 st.markdown("---")
 st.write("Using your trained fish species model")
+
