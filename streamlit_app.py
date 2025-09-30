@@ -128,7 +128,7 @@ with st.sidebar:
         st.success("✅ Gemini API: Configured")
     else:
         st.error("❌ Gemini API: Not configured")
-        st.info("Add GEMINI_API_KEY to .streamlit/secrets.toml")
+        st.info("Add GEMINI_API_KEY to secrets.toml")
     
     st.markdown("---")
     st.subheader("🔧 Features")
@@ -210,3 +210,4 @@ Context: {context}
 
 st.markdown("---")
 st.write("Powered by Google Gemini AI • Professional Marine Biology Analysis")
+
